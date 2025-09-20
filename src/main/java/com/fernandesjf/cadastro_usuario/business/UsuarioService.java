@@ -1,10 +1,10 @@
 package com.fernandesjf.cadastro_usuario.business;
 
+import com.fernandesjf.cadastro_usuario.infrastructure.DTOs.UsuarioRequestDTO;
+import com.fernandesjf.cadastro_usuario.infrastructure.DTOs.UsuarioResponseDTO;
 import com.fernandesjf.cadastro_usuario.infrastructure.entities.Usuario;
 import com.fernandesjf.cadastro_usuario.infrastructure.repositories.UsuarioRepository;
-import org.springframework.stereotype.Service;
 
-@Service
 public class UsuarioService {
   private final UsuarioRepository repository;
 
@@ -12,31 +12,41 @@ public class UsuarioService {
     this.repository = repository;
   }
 
-  public void savarUsuario(Usuario usuario) {
-    repository.saveAndFlush(usuario);
+  public UsuarioResponseDTO salvarUsuario(UsuarioRequestDTO dto) {
+    Usuario usuario = Usuario.builder()
+        .nome(dto.nome())
+        .email(dto.email())
+        .build();
+
+    Usuario salvo = repository.saveAndFlush(usuario);
+    return toResponseDTO(salvo);
   }
 
-  public Usuario buscarUsuarioPorEmail(String email) {
-    return repository.findByEmail(email).orElseThrow(
-        () -> new RuntimeException("Email não encontrado")
-    );
+  public UsuarioResponseDTO buscarUsuarioPorEmail(String email) {
+    Usuario usuario = repository.findByEmail(email)
+        .orElseThrow(() -> new RuntimeException("Email não encontrado"));
+    return toResponseDTO(usuario);
   }
 
   public void deletarUsuarioPorEmail(String email) {
     repository.deleteByEmail(email);
   }
 
-  public void atualizarUsuarioPorId(Integer id, Usuario usuario) {
-    Usuario usuarioEntity = repository.findById(id).orElseThrow(() ->
-        new RuntimeException("Usuario não encontrado"));
+  public UsuarioResponseDTO atualizarUsuarioPorId(Integer id, UsuarioRequestDTO dto) {
+    Usuario usuarioEntity = repository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Usuario não encontrado"));
 
     Usuario usuarioAtualizado = Usuario.builder()
-        .email(usuario.getEmail() != null ? usuario.getEmail() : usuarioEntity.getEmail())
-        .nome(usuario.getNome() != null ? usuario.getNome() : usuarioEntity.getNome())
-        .id(usuarioEntity.getId())
+        .id(usuarioEntity.getId()) // mantém ID do banco
+        .nome(dto.nome() != null ? dto.nome() : usuarioEntity.getNome())
+        .email(dto.email() != null ? dto.email() : usuarioEntity.getEmail())
         .build();
 
-    repository.saveAndFlush(usuarioAtualizado);
+    Usuario salvo = repository.saveAndFlush(usuarioAtualizado);
+    return toResponseDTO(salvo);
+  }
 
+  private UsuarioResponseDTO toResponseDTO(Usuario usuario) {
+    return new UsuarioResponseDTO(usuario.getId(), usuario.getNome(), usuario.getEmail());
   }
 }
